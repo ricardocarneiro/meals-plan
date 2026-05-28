@@ -15,19 +15,27 @@ export default function App() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    let recoveryMode = false;
+
+    // onAuthStateChange must be registered FIRST so PASSWORD_RECOVERY is caught
+    // before getSession() resolves and potentially overrides the route
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        recoveryMode = true;
+        setRoute("reset");
+        setChecking(false);
+        return;
+      }
+      if (recoveryMode) return; // ignore events that follow a recovery (e.g. SIGNED_IN)
+      setSession(session);
+      setRoute(session ? "app" : "login");
+    });
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (recoveryMode) return; // PASSWORD_RECOVERY already handled
       setSession(session);
       setRoute(session ? "app" : "login");
       setChecking(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setRoute("reset");
-        return;
-      }
-      setSession(session);
-      setRoute(session ? "app" : "login");
     });
 
     return () => subscription.unsubscribe();
