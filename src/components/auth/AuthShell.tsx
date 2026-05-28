@@ -1,4 +1,3 @@
-import { Utensils } from "lucide-react";
 import { brand } from "../../theme/tokens";
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
