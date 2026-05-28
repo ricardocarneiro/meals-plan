@@ -1,0 +1,728 @@
+{% comment %}
+  ================================================================
+  BIM Training Portal — Power Pages Web Template
+  ================================================================
+{% endcomment %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+{% fetchxml q %}
+<fetch mapping="logical">
+  <entity name="bim_tpcourse">
+    <attribute name="bim_tpcourseid" />
+    <attribute name="bim_title" />
+    <attribute name="bim_code" />
+    <attribute name="bim_fee" />
+    <attribute name="bim_programmecategory" />
+    <attribute name="bim_courseimage" />
+    <attribute name="bim_grantaided" />
+    <attribute name="bim_durationdescription" />
+    <attribute name="bim_assessment" />
+    <attribute name="bim_qualificationcertification" />
+    <attribute name="bim_whoisthiscoursefor" />
+    <attribute name="bim_trainingmethodology" />
+    <attribute name="bim_progressionandemploymentopportunities" />
+    <link-entity name="bim_tpcourseinstance" from="bim_course" to="bim_tpcourseid" link-type="outer" alias="inst">
+      <attribute name="bim_tpcourseinstanceid" />
+      <attribute name="bim_startdate" />
+      <attribute name="bim_enddate" />
+      <attribute name="bim_coursefee" />
+      <link-entity name="bim_tpcoursevenue" from="bim_tpcoursevenueid" to="bim_venue" link-type="outer" alias="venue">
+        <attribute name="bim_venueinformation" />
+        <attribute name="bim_venue" />
+        <attribute name="bim_city" />
+        <attribute name="bim_county" />
+        <attribute name="bim_addressline1" />
+        <attribute name="bim_eircode" />
+        <attribute name="bim_locationlink" />
+      </link-entity>
+    </link-entity>
+    <order attribute="bim_title" descending="false" />
+  </entity>
+</fetch>
+{% endfetchxml %}
+
+{% fetchxml req_q %}
+<fetch mapping="logical">
+  <entity name="bim_tpcourse">
+    <attribute name="bim_tpcourseid" />
+    <link-entity name="bim_courserequirements" from="bim_course" to="bim_tpcourseid" link-type="outer" alias="cr">
+      <attribute name="bim_courserequirementsid" />
+      <link-entity name="bim_requirement" from="bim_requirementid" to="bim_requirement" link-type="outer" alias="req">
+        <attribute name="bim_name" />
+        <attribute name="bim_validation" />
+      </link-entity>
+    </link-entity>
+  </entity>
+</fetch>
+{% endfetchxml %}
+
+{% include 'Main-Layout' %}
+
+<style>
+  /* ── Grant Aided dot ───────────────────────────────────────── */
+  .grant-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .82rem;
+    font-weight: 500;
+  }
+  .grant-dot.yes { color: #2e7d32; }
+  .grant-dot.no  { color: #c0392b; }
+
+  .master-row td { cursor: pointer; }
+
+  .master-row:hover td {
+    background-color: rgba(var(--bim-primary-rgb, 26, 84, 110), 0.08);
+    transition: background-color 0.15s ease;
+  }
+
+  .info-cell { width: 40px; text-align: center; }
+
+  .info-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--bim-primary, #1a546e); font-size: 1.2rem;
+    padding: 4px 6px; border-radius: 50%;
+    transition: background 0.15s ease, color 0.15s ease;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .info-btn:hover { background: rgba(26,84,110,0.12); color: #004b64; }
+
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  .instance-table thead th.sortable:hover { filter: brightness(0.88); }
+
+  th.sortable .sort-icon {
+    display: inline-block; margin-left: 5px;
+    font-size: .7rem; opacity: .6; vertical-align: middle;
+  }
+  th.sortable .sort-icon::after  { font-family: 'Font Awesome 6 Free'; font-weight: 900; content: '\f0dc'; }
+  th.sort-asc  .sort-icon::after { font-family: 'Font Awesome 6 Free'; font-weight: 900; content: '\f0de'; }
+  th.sort-desc .sort-icon::after { font-family: 'Font Awesome 6 Free'; font-weight: 900; content: '\f0dd'; }
+  th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity: 1; }
+
+  .drawer-course-info {
+    margin-top: 1.25rem;
+    border-top: 1px solid #e3e7ea;
+    padding-top: 1rem;
+  }
+
+  .drawer-course-info h4 {
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #004b64;
+    margin: 0 0 .75rem 0;
+  }
+
+  .drawer-course-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1.25rem;
+    margin-top: 0.75rem;
+  }
+
+  .drawer-info-block { margin-bottom: 1rem; }
+  .drawer-info-block label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #7a8a9a;
+    margin-bottom: .25rem;
+  }
+  .drawer-info-block p {
+    margin: 0;
+    font-size: .9rem;
+    color: #2f3f49;
+    line-height: 1.6;
+  }
+</style>
+
+<div class="tp-wrap">
+
+  <div class="tp-header">
+    <h1>Training Courses</h1>
+    <p>Browse available BIM courses and enrol in an upcoming instance.</p>
+  </div>
+
+  <div class="tp-toolbar">
+    <input class="tp-search" id="searchInput" type="search" placeholder="Search by course name or code&hellip;" />
+    <select class="tp-filter" id="catFilter">
+      <option value="">All categories</option>
+      <option value="913700000">Processors and Retailers</option>
+      <option value="913700001">Commercial Diver</option>
+      <option value="913700002">Engineering</option>
+      <option value="913700003">Safety</option>
+      <option value="913700004">Radio</option>
+      <option value="913700005">Skippers and Crew</option>
+    </select>
+    <select class="tp-filter" id="locationFilter">
+      <option value="">All locations</option>
+    </select>
+  </div>
+
+  <div class="tp-card">
+    <table id="coursesTable">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="sortable" data-sort="title">Course<span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="cat">Category<span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="fee">Fee<span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="grant">Grant<span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="instCount">Available Dates<span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="code">Code<span class="sort-icon"></span></th>
+        </tr>
+      </thead>
+      <tbody id="coursesBody">
+
+{% assign prev_cid  = "" %}
+{% assign inst_open = "no" %}
+
+{% for row in q.results.entities %}
+
+  {% assign cid     = row.bim_tpcourseid %}
+  {% assign inst_id = row['inst.bim_tpcourseinstanceid'] %}
+
+  {% if cid != prev_cid %}
+
+    {% if prev_cid != "" %}
+      {% if inst_open == "yes" %}
+        </tbody></table>
+        {% assign inst_open = "no" %}
+      {% endif %}
+      </div></td></tr>
+    {% endif %}
+
+    {% capture cat_raw %}{{ row.bim_programmecategory.Value }}{% endcapture %}
+    {% capture grant_raw %}{{ row.bim_grantaided }}{% endcapture %}
+
+    {% assign inst_count = 0 %}
+    {% for r2 in q.results.entities %}
+      {% if r2.bim_tpcourseid == cid and r2['inst.bim_tpcourseinstanceid'] != blank and r2['inst.bim_startdate'] != blank %}
+        {% assign inst_count = inst_count | plus: 1 %}
+      {% endif %}
+    {% endfor %}
+
+    {% assign course_venues = "" %}
+    {% for r2 in q.results.entities %}
+      {% if r2.bim_tpcourseid == cid %}
+        {% assign v = r2['venue.bim_venue'] %}
+        {% if v != blank %}
+          {% assign course_venues = course_venues | append: v | append: "|" %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    {% assign prev_cid = cid %}
+
+    {% assign course_reqs = "" %}
+    {% for r in req_q.results.entities %}
+      {% if r.bim_tpcourseid == cid %}
+        {% assign req_name = r['req.bim_name'] | default: '' %}
+        {% assign req_val  = r['req.bim_validation'] | default: '' %}
+        {% if req_name != blank %}
+          {% assign course_reqs = course_reqs | append: req_name | append: "~~" | append: req_val | append: "||" %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    <tr class="master-row"
+        data-course-id="{{ cid }}"
+        data-title="{{ row.bim_title | escape }}"
+        data-code="{{ row.bim_code | escape }}"
+        data-fee="{{ row.bim_fee }}"
+        data-cat="{{ cat_raw }}"
+        data-inst-count="{{ inst_count }}"
+        data-image="{{ row.bim_courseimage | escape }}"
+        data-venues="{{ course_venues | escape }}"
+        data-grant="{{ grant_raw }}"
+        data-duration="{{ row.bim_durationdescription | escape }}"
+        data-assessment="{{ row.bim_assessment | escape }}"
+        data-qualification="{{ row.bim_qualificationcertification | escape }}"
+        data-whofor="{{ row.bim_whoisthiscoursefor | escape }}"
+        data-methodology="{{ row.bim_trainingmethodology | escape }}"
+        data-progression="{{ row.bim_progressionandemploymentopportunities | escape }}"
+        data-requirements="{{ course_reqs | escape }}">
+
+      <td class="info-cell">
+        <button class="info-btn" title="View course details" aria-label="View course details">
+          <i class="fa-solid fa-circle-info" style="color: rgb(0,75,100);"></i>
+        </button>
+      </td>
+      <td>{{ row.bim_title | escape }}</td>
+      <td><span class="badge cat-badge"></span></td>
+      <td>{% if row.bim_fee %}&#8364;{{ row.bim_fee }}{% else %}&mdash;{% endif %}</td>
+      <td style="text-align:center;"><span class="grant-dot"></span></td>
+      <td>{{ inst_count }}</td>
+      <td>{{ row.bim_code | escape }}</td>
+    </tr>
+
+    <tr class="instance-container" data-for="{{ cid }}">
+      <td colspan="7">
+        <div class="instance-wrap" id="inst-{{ cid }}">
+          {% if inst_id == blank %}
+            <p style="padding:16px 48px;color:#7a8a9a;font-size:.88rem;">No upcoming instances available.</p>
+          {% else %}
+            <table class="instance-table">
+              <thead><tr><th class="sortable" data-sort="venue">Venue<span class="sort-icon"></span></th><th class="sortable" data-sort="start">Start<span class="sort-icon"></span></th><th class="sortable" data-sort="end">End<span class="sort-icon"></span></th><th>Action</th></tr></thead>
+              <tbody>
+            {% assign inst_open = "yes" %}
+          {% endif %}
+
+  {% endif %}
+
+  {% assign inst_start = row['inst.bim_startdate'] %}
+  {% if inst_id != blank and inst_start != blank %}
+
+    {% if inst_open == "no" %}
+      <table class="instance-table">
+        <thead><tr><th class="sortable" data-sort="venue">Venue<span class="sort-icon"></span></th><th class="sortable" data-sort="start">Start<span class="sort-icon"></span></th><th class="sortable" data-sort="end">End<span class="sort-icon"></span></th><th>Action</th></tr></thead>
+        <tbody>
+      {% assign inst_open = "yes" %}
+    {% endif %}
+
+    {% assign v_name   = row['venue.bim_venue'] %}
+    {% assign v_city   = row['venue.bim_city'].Name %}
+    {% assign v_county = row['venue.bim_county'].Name %}
+    {% assign v_addr   = row['venue.bim_addressline1'] %}
+    {% assign v_eir    = row['venue.bim_eircode'] %}
+    {% assign v_map    = row['venue.bim_locationlink'] %}
+
+    <tr class="inst-row"
+        data-inst-id="{{ inst_id }}"
+        data-course-title="{{ row.bim_title | escape }}"
+        data-start="{{ row['inst.bim_startdate'] }}"
+        data-end="{{ row['inst.bim_enddate'] }}"
+        data-fee="{{ row['inst.bim_coursefee'] }}"
+        data-venue="{{ v_name }}"
+        data-city="{{ v_city }}"
+        data-county="{{ v_county }}"
+        data-addr="{{ v_addr | escape }}"
+        data-eir="{{ v_eir | escape }}"
+        data-map="{{ v_map | escape }}">
+      <td>{{ v_name | default: '&mdash;' }}{% if v_city %}, {{ v_city }}{% endif %}</td>
+      <td><span class="fmt-date">{{ row['inst.bim_startdate'] }}</span></td>
+      <td><span class="fmt-date">{{ row['inst.bim_enddate'] }}</span></td>
+      <td><button class="btn-enrol inst-enrol-btn">Apply</button></td>
+    </tr>
+  {% endif %}
+
+  {% if forloop.last %}
+    {% if inst_open == "yes" %}
+      </tbody></table>
+    {% endif %}
+    </div></td></tr>
+  {% endif %}
+
+{% endfor %}
+
+      </tbody>
+    </table>
+
+    <div class="no-results" id="noResults" style="display:none;">No courses match your search.</div>
+  </div>
+</div>
+
+<div id="drawer-overlay"></div>
+
+<aside id="detail-drawer">
+  <div class="drawer-header">
+    <h2 id="dd-title">Course Detail</h2>
+    <button class="drawer-close" id="dd-close" aria-label="Close">&#x2715;</button>
+  </div>
+  <div class="drawer-body" id="dd-body"></div>
+  <div id="dd-map"></div>
+  <div class="drawer-footer">
+    <button class="btn-enrol-main" id="dd-enrol-btn" disabled>Check available Course Dates</button>
+    <p class="drawer-hint" id="dd-hint">Select an instance to apply</p>
+  </div>
+</aside>
+
+<script>
+(function () {
+
+  var APPLY_URL = 'https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=2T8PFLaHP0e5dXIInHyetf3NXWSM21xDnN9_5kr3TLdUMlU1UTNWSE9BNks1QjU2VUxVMkhOR1A3NC4u';
+
+  var CAT_MAP = {
+    '913700000': { label: 'Processors and Retailers', cls: 'badge-proc' },
+    '913700001': { label: 'Commercial Diver',         cls: 'badge-diver' },
+    '913700002': { label: 'Engineering',              cls: 'badge-eng' },
+    '913700003': { label: 'Safety',                   cls: 'badge-safe' },
+    '913700004': { label: 'Radio',                    cls: 'badge-radio' },
+    '913700005': { label: 'Skippers and Crew',        cls: 'badge-skip' }
+  };
+
+  (function () {
+    var root = document.documentElement;
+    if (!getComputedStyle(root).getPropertyValue('--bim-primary-rgb').trim()) {
+      root.style.setProperty('--bim-primary-rgb', '26, 84, 110');
+    }
+  })();
+
+  var locationSet = {};
+  document.querySelectorAll('.master-row').forEach(function (row) {
+    /* ── Category badge ───────────────────────────────────────── */
+    var cat  = (row.dataset.cat || '').trim();
+    var info = CAT_MAP[cat] || { label: 'Other', cls: '' };
+    row.dataset.catLabel = info.label;
+    row.dataset.catClass = info.cls;
+    var badge = row.querySelector('.cat-badge');
+    if (badge) { badge.textContent = info.label; badge.className = 'badge ' + info.cls; }
+
+    /* ── Location set for filter ──────────────────────────────── */
+    var venues = (row.dataset.venues || '').split('|').map(function(v){ return v.trim(); }).filter(Boolean);
+    venues.forEach(function(v) { locationSet[v] = true; });
+
+    /* ── Grant Aided indicator ────────────────────────────────── */
+    var dot = row.querySelector('.grant-dot');
+    if (dot) {
+      var isGrant = (row.dataset.grant || '').toLowerCase() === 'true';
+      dot.innerHTML = isGrant
+        ? '<i class="fa-solid fa-check" style="color: rgb(65, 138, 24);"></i> Yes'
+        : '<i class="fa-solid fa-ban" style="color: rgb(231, 63, 39);"></i> No';
+      dot.title = isGrant ? 'Grant Aided' : 'Not Grant Aided';
+    }
+  });
+
+  var locationFilter = document.getElementById('locationFilter');
+  Object.keys(locationSet).sort().forEach(function(v) {
+    var opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    locationFilter.appendChild(opt);
+  });
+
+  var overlay     = document.getElementById('drawer-overlay');
+  var detDrawer   = document.getElementById('detail-drawer');
+  var searchInput = document.getElementById('searchInput');
+  var catFilter   = document.getElementById('catFilter');
+
+  function openDetail()  { detDrawer.classList.add('open'); overlay.classList.add('active'); }
+  function closeDetail() { detDrawer.classList.remove('open'); overlay.classList.remove('active'); }
+
+  overlay.addEventListener('click', closeDetail);
+  document.getElementById('dd-close').addEventListener('click', closeDetail);
+
+  function toggleInstances(masterRow) {
+    var cid  = masterRow.dataset.courseId;
+    var wrap = document.getElementById('inst-' + cid);
+    var isOpen = wrap && wrap.classList.contains('open');
+    document.querySelectorAll('.instance-wrap.open').forEach(function (w) {
+      if (w !== wrap) w.classList.remove('open');
+    });
+    if (wrap) wrap.classList.toggle('open', !isOpen);
+  }
+
+  function infoBlock(label, value) {
+    if (!value || !value.trim()) return '';
+    return '<div class="drawer-info-block">' +
+      '<label>' + label + '</label>' +
+      '<p>' + value + '</p>' +
+    '</div>';
+  }
+
+  function fmt(s) {
+    if (!s) return '\u2014';
+    var d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function money(v) {
+    return v ? '\u20AC' + parseFloat(v).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '\u2014';
+  }
+
+  function showCourseDetail(masterRow) {
+    var d = masterRow.dataset;
+    document.getElementById('dd-title').textContent = d.title || '';
+
+    var imgHtml = d.image
+      ? '<div style="width:100%;height:320px;overflow:hidden;margin:-24px -24px 20px -24px;width:calc(100% + 48px);">' +
+          '<img src="' + d.image + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />' +
+        '</div>'
+      : '';
+
+    var grantLabel = d.grant === 'true' ? 'Yes' : d.grant === 'false' ? 'No' : '\u2014';
+
+    var courseInfoHtml =
+      infoBlock('Duration', d.duration) +
+      infoBlock('Assessment', d.assessment) +
+      infoBlock('Qualification / Certification', d.qualification) +
+      infoBlock('Who is this Course for?', d.whofor) +
+      infoBlock('Training Methodology', d.methodology) +
+      infoBlock('Progression and Employment Opportunities', d.progression);
+
+    var reqs = (d.requirements || '').split('||').map(function(r){ return r.trim(); }).filter(Boolean);
+    var reqHtml = '';
+    if (reqs.length > 0) {
+      reqHtml = '<div class="drawer-course-info">' +
+        '<h4>Course Prerequisites</h4>' +
+        '<div class="drawer-course-info-grid">';
+      reqs.forEach(function(r) {
+        var parts = r.split('~~');
+        var name = parts[0] || '\u2014';
+        var val  = parts[1] || '\u2014';
+        reqHtml += '<div class="drawer-info-block"><label>Requirement</label><p>' + name + '</p></div>' +
+                   '<div class="drawer-info-block"><label>Validation</label><p>' + val + '</p></div>';
+      });
+      reqHtml += '</div></div>';
+    }
+
+    document.getElementById('dd-body').innerHTML =
+      imgHtml +
+      '<div class="drawer-section"><label>Category</label>' +
+        '<p><span class="badge ' + d.catClass + '">' + d.catLabel + '</span></p>' +
+      '</div>' +
+      '<div class="drawer-meta-grid">' +
+        '<div class="drawer-section"><label>Course Code</label><p>' + (d.code || '\u2014') + '</p></div>' +
+        '<div class="drawer-section"><label>Fee</label><p>' + money(d.fee) + '</p></div>' +
+        '<div class="drawer-section"><label>Grant Eligible</label><p>' + grantLabel + '</p></div>' +
+        '<div class="drawer-section"><label>Upcoming Instances</label><p>' + d.instCount + '</p></div>' +
+      '</div>' +
+      (courseInfoHtml
+        ? '<div class="drawer-course-info">' +
+            '<h4>Course Information</h4>' +
+            '<div class="drawer-course-info-grid">' + courseInfoHtml + '</div>' +
+          '</div>'
+        : '') +
+      reqHtml +
+      '<div class="drawer-section" style="background:var(--bim-primary-lt);border-radius:var(--radius);padding:14px 16px;color:#3a5060;font-size:.88rem;margin-top:1rem;">' +
+        'Click an instance row to select a date and location, then apply.' +
+      '</div>';
+
+    /* Set drawer mode and active course for the footer button */
+    detDrawer.dataset.mode = 'course';
+    detDrawer.dataset.activeCourseId = d.courseId;
+
+    var enrolBtn = document.getElementById('dd-enrol-btn');
+    enrolBtn.disabled = false;
+    enrolBtn.textContent = 'Check available Course Dates';
+    document.getElementById('dd-hint').style.display = 'none';
+    document.getElementById('dd-map').innerHTML = '';
+    openDetail();
+  }
+
+  function showInstanceDetail(inst, courseTitle) {
+    document.getElementById('dd-title').textContent = courseTitle || '';
+    var cityCounty = [inst.city, inst.county].filter(Boolean).join(', ') || '\u2014';
+
+    document.getElementById('dd-body').innerHTML =
+      '<div class="drawer-section"><label>Venue</label><p style="font-weight:600">' + (inst.venue || '\u2014') + '</p></div>' +
+      '<div class="drawer-meta-grid">' +
+        '<div class="drawer-section"><label>Start Date</label><p>' + fmt(inst.start) + '</p></div>' +
+        '<div class="drawer-section"><label>End Date</label><p>'   + fmt(inst.end)   + '</p></div>' +
+        '<div class="drawer-section"><label>Instance Fee</label><p>' + money(inst.fee) + '</p></div>' +
+        '<div class="drawer-section"><label>City / County</label><p>' + cityCounty + '</p></div>' +
+      '</div>' +
+      ((inst.addr || inst.eir) ? '<div class="drawer-section"><label>Address</label><p>' + [inst.addr, inst.eir].filter(Boolean).join(', ') + '</p></div>' : '');
+
+    /* Set drawer mode for the footer button */
+    detDrawer.dataset.mode = 'instance';
+
+    var enrolBtn = document.getElementById('dd-enrol-btn');
+    enrolBtn.disabled = false;
+    enrolBtn.textContent = 'Apply for this instance';
+    document.getElementById('dd-hint').style.display = 'none';
+
+    var ddMap = document.getElementById('dd-map');
+    var mapQuery = [inst.addr, inst.eir, inst.city, inst.county].filter(Boolean).join(', ');
+    if (mapQuery) {
+      var encodedQuery = encodeURIComponent(mapQuery);
+      var embedUrl = 'https://maps.google.com/maps?q=' + encodedQuery + '&output=embed';
+      var mapsUrl  = 'https://www.google.com/maps/search/?api=1&query=' + encodedQuery;
+      ddMap.innerHTML =
+        '<a href="' + mapsUrl + '" target="_blank" rel="noopener" class="mini-map-wrap" title="Open in Google Maps">' +
+          '<iframe src="' + embedUrl + '" class="mini-map" frameborder="0" allowfullscreen loading="lazy" tabindex="-1"></iframe>' +
+          '<div class="mini-map-overlay">\uD83D\uDDFA Open in Google Maps</div>' +
+        '</a>';
+    } else {
+      ddMap.innerHTML = '';
+    }
+    openDetail();
+  }
+
+  function getInstData(row) {
+    var d = row.dataset;
+    return { id: d.instId, start: d.start, end: d.end, fee: d.fee,
+             venue: d.venue, city: d.city, county: d.county,
+             addr: d.addr, eir: d.eir, map: d.map };
+  }
+
+  document.getElementById('coursesBody').addEventListener('click', function (e) {
+    if (e.target.closest('.inst-enrol-btn')) {
+      e.stopPropagation();
+      window.open(APPLY_URL, '_blank');
+      return;
+    }
+
+    var instRow = e.target.closest('.inst-row');
+    if (instRow) {
+      e.stopPropagation();
+      var instData = getInstData(instRow);
+      if (!instData.start && !instData.venue && !instData.fee) return;
+      var mr2 = instRow.closest('table').closest('tr').previousElementSibling;
+      showInstanceDetail(instData, mr2 ? mr2.dataset.title : '');
+      return;
+    }
+
+    var infoBtn = e.target.closest('.info-btn');
+    if (infoBtn) {
+      e.stopPropagation();
+      showCourseDetail(infoBtn.closest('.master-row'));
+      return;
+    }
+
+    var masterRow = e.target.closest('.master-row');
+    if (masterRow) {
+      e.stopPropagation();
+      toggleInstances(masterRow);
+      return;
+    }
+  });
+
+  /* ── Footer button — behaviour depends on drawer mode ─────── */
+  document.getElementById('dd-enrol-btn').addEventListener('click', function () {
+    var mode = detDrawer.dataset.mode;
+    if (mode === 'course') {
+      /* Close drawer and expand instances for this course */
+      var cid = detDrawer.dataset.activeCourseId;
+      closeDetail();
+      if (cid) {
+        var wrap = document.getElementById('inst-' + cid);
+        if (wrap) {
+          document.querySelectorAll('.instance-wrap.open').forEach(function (w) {
+            if (w !== wrap) w.classList.remove('open');
+          });
+          wrap.classList.add('open');
+          /* Scroll smoothly to the course row */
+          var masterRow = document.querySelector('.master-row[data-course-id="' + cid + '"]');
+          if (masterRow) masterRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    } else {
+      /* Instance mode — open Microsoft Form */
+      window.open(APPLY_URL, '_blank');
+    }
+  });
+
+  function applyFilters() {
+    var q   = searchInput.value.toLowerCase().trim();
+    var cat = catFilter.value;
+    var loc = locationFilter.value;
+    var visible = 0;
+
+    document.querySelectorAll('.master-row').forEach(function (row) {
+      var mq = !q ||
+        (row.dataset.title || '').toLowerCase().indexOf(q) > -1 ||
+        (row.dataset.code  || '').toLowerCase().indexOf(q) > -1;
+      var mc = !cat || row.dataset.cat === cat;
+      var ml = !loc || (row.dataset.venues || '').indexOf(loc) > -1;
+      var show = mq && mc && ml;
+      row.style.display = show ? '' : 'none';
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains('instance-container')) next.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  searchInput.addEventListener('input',  applyFilters);
+  catFilter.addEventListener('change',   applyFilters);
+  locationFilter.addEventListener('change', applyFilters);
+
+  document.querySelectorAll('span.fmt-date').forEach(function (el) {
+    var raw = (el.textContent || '').trim();
+    if (!raw) { el.textContent = '\u2014'; return; }
+    var d = new Date(raw);
+    el.textContent = isNaN(d) ? raw : d.toLocaleDateString('en-IE', { day: '2-digit', month: 'short', year: 'numeric' });
+  });
+
+  var coursesSortCol = null;
+  var coursesSortDir = 'asc';
+
+  function getCourseValue(row, col) {
+    switch (col) {
+      case 'title':     return (row.dataset.title    || '').toLowerCase();
+      case 'code':      return (row.dataset.code     || '').toLowerCase();
+      case 'cat':       return (row.dataset.catLabel || '').toLowerCase();
+      case 'fee':       return parseFloat(row.dataset.fee) || 0;
+      case 'instCount': return parseInt(row.dataset.instCount, 10) || 0;
+      case 'grant':     return (row.dataset.grant    || '').toLowerCase();
+      default:          return '';
+    }
+  }
+
+  function sortCourses(col) {
+    if (coursesSortCol === col) {
+      coursesSortDir = coursesSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      coursesSortCol = col;
+      coursesSortDir = 'asc';
+    }
+    document.querySelectorAll('#coursesTable thead th[data-sort]').forEach(function (th) {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.sort === col) th.classList.add(coursesSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+    var tbody = document.getElementById('coursesBody');
+    var masterRows = Array.from(tbody.querySelectorAll('.master-row'));
+    masterRows.sort(function (a, b) {
+      var av = getCourseValue(a, col);
+      var bv = getCourseValue(b, col);
+      if (av < bv) return coursesSortDir === 'asc' ? -1 : 1;
+      if (av > bv) return coursesSortDir === 'asc' ?  1 : -1;
+      return 0;
+    });
+    masterRows.forEach(function (mr) {
+      var ic = mr.nextElementSibling;
+      tbody.appendChild(mr);
+      if (ic && ic.classList.contains('instance-container')) tbody.appendChild(ic);
+    });
+  }
+
+  document.querySelectorAll('#coursesTable thead th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () { sortCourses(th.dataset.sort); });
+  });
+
+  function getInstValue(row, col) {
+    switch (col) {
+      case 'venue': return (row.dataset.venue || '').toLowerCase();
+      case 'start': return row.dataset.start ? new Date(row.dataset.start).getTime() : 0;
+      case 'end':   return row.dataset.end   ? new Date(row.dataset.end).getTime()   : 0;
+      default:      return '';
+    }
+  }
+
+  function sortInstances(th) {
+    var table   = th.closest('.instance-table');
+    var col     = th.dataset.sort;
+    var prevCol = table.dataset.sortCol || '';
+    var prevDir = table.dataset.sortDir || '';
+    var dir = (prevCol === col && prevDir === 'asc') ? 'desc' : 'asc';
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = dir;
+    table.querySelectorAll('thead th[data-sort]').forEach(function (h) {
+      h.classList.remove('sort-asc', 'sort-desc');
+      if (h.dataset.sort === col) h.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+    var tbody = table.querySelector('tbody');
+    var rows  = Array.from(tbody.querySelectorAll('.inst-row'));
+    rows.sort(function (a, b) {
+      var av = getInstValue(a, col);
+      var bv = getInstValue(b, col);
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ?  1 : -1;
+      return 0;
+    });
+    rows.forEach(function (r) { tbody.appendChild(r); });
+  }
+
+  document.getElementById('coursesBody').addEventListener('click', function (e) {
+    var instTh = e.target.closest('.instance-table thead th.sortable');
+    if (instTh) { e.stopPropagation(); sortInstances(instTh); }
+  }, true);
+
+})();
+</script>
