@@ -5,10 +5,12 @@ import { useProfile } from "./hooks/useProfile";
 import { ensureTodaysMeals } from "./hooks/useMealTemplates"; 
 import { LoginPage } from "./components/auth/LoginPage";
 import { SignupPage } from "./components/auth/SignupPage";
+import { ForgotPasswordPage } from "./components/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "./components/auth/ResetPasswordPage";
 import { Dashboard } from "./pages/Dashboard";
 
 export default function App() {
-  const [route, setRoute] = useState<"login" | "signup" | "app">("login");
+  const [route, setRoute] = useState<"login" | "signup" | "forgot" | "reset" | "app">("login");
   const [session, setSession] = useState<any>(null);
   const [checking, setChecking] = useState(true);
 
@@ -19,7 +21,11 @@ export default function App() {
       setChecking(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setRoute("reset");
+        return;
+      }
       setSession(session);
       setRoute(session ? "app" : "login");
     });
@@ -61,8 +67,10 @@ export default function App() {
     );
   }
 
-  if (route === "login")  return <LoginPage  onLogin={() => setRoute("app")}    onSwitch={() => setRoute("signup")} />;
-  if (route === "signup") return <SignupPage onSignup={() => setRoute("app")}   onSwitch={() => setRoute("login")} />;
+  if (route === "login")   return <LoginPage   onLogin={() => setRoute("app")} onSwitch={() => setRoute("signup")} onForgot={() => setRoute("forgot")} />;
+  if (route === "signup")  return <SignupPage  onSignup={() => setRoute("app")} onSwitch={() => setRoute("login")} />;
+  if (route === "forgot")  return <ForgotPasswordPage onBack={() => setRoute("login")} />;
+  if (route === "reset")   return <ResetPasswordPage  onDone={() => setRoute("login")} />;
   if (!user || !profile) return null;
 
   return <Dashboard user={user} profile={profile} updateProfile={updateProfile} onLogout={handleLogout} />;
