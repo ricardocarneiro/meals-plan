@@ -5,37 +5,23 @@ import { useProfile } from "./hooks/useProfile";
 import { ensureTodaysMeals } from "./hooks/useMealTemplates"; 
 import { LoginPage } from "./components/auth/LoginPage";
 import { SignupPage } from "./components/auth/SignupPage";
-import { ForgotPasswordPage } from "./components/auth/ForgotPasswordPage";
-import { ResetPasswordPage } from "./components/auth/ResetPasswordPage";
 import { Dashboard } from "./pages/Dashboard";
 
 export default function App() {
-  const [route, setRoute] = useState<"login" | "signup" | "forgot" | "reset" | "app">("login");
+  const [route, setRoute] = useState<"login" | "signup" | "app">("login");
   const [session, setSession] = useState<any>(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    let recoveryMode = false;
-
-    // onAuthStateChange must be registered FIRST so PASSWORD_RECOVERY is caught
-    // before getSession() resolves and potentially overrides the route
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        recoveryMode = true;
-        setRoute("reset");
-        setChecking(false);
-        return;
-      }
-      if (recoveryMode) return; // ignore events that follow a recovery (e.g. SIGNED_IN)
-      setSession(session);
-      setRoute(session ? "app" : "login");
-    });
-
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (recoveryMode) return; // PASSWORD_RECOVERY already handled
       setSession(session);
       setRoute(session ? "app" : "login");
       setChecking(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setRoute(session ? "app" : "login");
     });
 
     return () => subscription.unsubscribe();
@@ -75,10 +61,8 @@ export default function App() {
     );
   }
 
-  if (route === "login")   return <LoginPage   onLogin={() => setRoute("app")} onSwitch={() => setRoute("signup")} onForgot={() => setRoute("forgot")} />;
-  if (route === "signup")  return <SignupPage  onSignup={() => setRoute("app")} onSwitch={() => setRoute("login")} />;
-  if (route === "forgot")  return <ForgotPasswordPage onBack={() => setRoute("login")} />;
-  if (route === "reset")   return <ResetPasswordPage  onDone={() => setRoute("login")} />;
+  if (route === "login")  return <LoginPage  onLogin={() => setRoute("app")} onSwitch={() => setRoute("signup")} />;
+  if (route === "signup") return <SignupPage onSignup={() => setRoute("app")} onSwitch={() => setRoute("login")} />;
   if (!user || !profile) return null;
 
   return <Dashboard user={user} profile={profile} updateProfile={updateProfile} onLogout={handleLogout} />;

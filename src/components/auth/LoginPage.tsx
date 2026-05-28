@@ -5,7 +5,7 @@ import { brand } from "../../theme/tokens";
 import { AuthShell } from "./AuthShell";
 import { Field } from "./Field";
 
-export function LoginPage({ onLogin, onSwitch, onForgot }: { onLogin: () => void; onSwitch: () => void; onForgot: () => void }) {
+export function LoginPage({ onLogin, onSwitch }: { onLogin: () => void; onSwitch: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -47,9 +47,6 @@ export function LoginPage({ onLogin, onSwitch, onForgot }: { onLogin: () => void
               </button>
             </div>
           </Field>
-          <div className="flex justify-end">
-            <button type="button" onClick={onForgot} className="text-sm font-medium" style={{ color: brand.primary }}>Forgot password?</button>
-          </div>
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
               {error}
